@@ -3,37 +3,42 @@ import moteus
 import moteus_pi3hat
 
 async def main():
-    # Define the transport without specifying a servo bus map to scan all buses
-    transport = moteus_pi3hat.Pi3HatRouter()
+    # Explicitly map servo IDs to buses
+    servo_bus_map = {
+        1: [11, 12],  # Bus 1 (JC1) -> IDs 11, 12
+        2: [21, 22],  # Bus 2 (JC2) -> IDs 21, 22
+    }
 
-    print("Scanning for connected servos...")
+    # Initialize Pi3HatRouter
+    transport = moteus_pi3hat.Pi3HatRouter(servo_bus_map=servo_bus_map)
 
-    # Create a list to store discovered servo IDs
-    discovered_servos = []
+    print("Scanning for connected servos on Bus 1 (JC1) and Bus 2 (JC2)...")
 
-    # Iterate over possible servo IDs (moteus typically supports 1 to 127)
-    for servo_id in range(1, 128):
-        # Create a controller instance for the current ID
-        controller = moteus.Controller(id=servo_id, transport=transport)
+    discovered_servos = {1: [], 2: []}
 
-        try:
-            # Attempt to query the servo
-            result = await transport.cycle([controller.make_query()])
+    # Iterate over buses and their expected servo IDs
+    for bus, ids in servo_bus_map.items():
+        print(f"\nScanning bus {bus}...")
+        for servo_id in ids:
+            controller = moteus.Controller(id=servo_id, transport=transport)
+            try:
+                # Query the servo
+                result = await transport.cycle([controller.make_query()])
+                print(f"Raw result from bus {bus}, ID {servo_id}: {result}")
+                for res in result:
+                    if res.arbitration_id == servo_id:
+                        discovered_servos[bus].append(servo_id)
+                        print(f"Found servo with ID: {servo_id} on bus {bus}")
+            except Exception as e:
+                print(f"Error querying servo ID {servo_id} on bus {bus}: {e}")
 
-            # Verify that the response contains a valid POSITION register
-            if result and moteus.Register.POSITION in result[0].values:
-                discovered_servos.append(servo_id)
-                print(f"Found servo with ID: {servo_id}")
-
-        except Exception:
-            # Ignore errors for IDs that do not respond
-            pass
-
-    # Print the results
-    if discovered_servos:
-        print(f"Discovered servos: {discovered_servos}")
-    else:
-        print("No servos found.")
+    # Print results
+    print("\nScan Results:")
+    for bus, ids in discovered_servos.items():
+        if ids:
+            print(f"Discovered servos on bus {bus}: {ids}")
+        else:
+            print(f"No servos found on bus {bus}")
 
 if __name__ == "__main__":
     asyncio.run(main())
