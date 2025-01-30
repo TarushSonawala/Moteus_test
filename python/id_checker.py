@@ -4,7 +4,7 @@ import moteus_pi3hat
 
 async def main():
     # Explicitly map servo IDs to buses
-   servo_bus_map = {
+    servo_bus_map = {
         1: [11, 12,13,14,15,16,17],  # Bus 1 (JC1) -> IDs 11, 12
         2: [21, 22,23,24,25,26,27],  # Bus 2 (JC2) -> IDs 21, 22
     }
